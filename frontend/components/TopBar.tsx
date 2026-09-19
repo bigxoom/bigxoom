@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { getCurrentUser, roleLabel } from '@/lib/roles';
+import { useCurrentUser, roleLabel } from '@/lib/roles';
 import { IconSearch, IconBell, IconWifi } from './icons';
 
 function HamburgerIcon() {
@@ -23,7 +23,7 @@ export default function TopBar({
   onOpenMenu: () => void;
   alertCount?: number;
 }) {
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const [online, setOnline] = useState<boolean | null>(null);
 
   useEffect(() => {

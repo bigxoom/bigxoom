@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 export type CurrentUser = { id: string; fullName: string; username: string; role: string; department?: string };
 
 export function getCurrentUser(): CurrentUser | null {
@@ -8,6 +10,18 @@ export function getCurrentUser(): CurrentUser | null {
   } catch {
     return null;
   }
+}
+
+// Reads the logged-in user from localStorage, which isn't available during
+// SSR — returning it straight from render would desync the server and first
+// client render (hydration mismatch). This starts at null on every render
+// pass and only picks up the real value after mount, once hydration is done.
+export function useCurrentUser(): CurrentUser | null {
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
+  return user;
 }
 
 export const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'GENERAL_MANAGER'];

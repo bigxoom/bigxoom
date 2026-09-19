@@ -1,14 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getCurrentUser, roleLabel } from '@/lib/roles';
+import { useCurrentUser, roleLabel } from '@/lib/roles';
 import { navForRole } from '@/lib/nav';
 import { IconLogout } from './icons';
 
 export default function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const groups = navForRole(user?.role);
 
   function logout() {

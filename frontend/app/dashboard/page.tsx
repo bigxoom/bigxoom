@@ -10,7 +10,7 @@ import AttentionRequired from '@/components/AttentionRequired';
 import LiveOperationsPanel from '@/components/LiveOperationsPanel';
 import QuickActions from '@/components/QuickActions';
 import { api } from '@/lib/api';
-import { getCurrentUser } from '@/lib/roles';
+import { useCurrentUser } from '@/lib/roles';
 import { computeAlerts } from '@/lib/alerts';
 import { IconBed, IconCalendar, IconMoney, IconWifi } from '@/components/icons';
 
@@ -27,7 +27,7 @@ const money = (n: number) => `${Math.round(n || 0).toLocaleString()} RWF`;
 
 export default function DashboardPage() {
   const router = useRouter();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const now = useLiveClock();
 
   const [summary, setSummary] = useState<any>(null);

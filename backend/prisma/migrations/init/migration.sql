@@ -141,7 +141,7 @@ CREATE TABLE "FolioItem" (
 
 CREATE TABLE "Invoice" (
   "id" TEXT NOT NULL PRIMARY KEY,
-  "number" INTEGER NOT NULL UNIQUE,
+  "number" SERIAL UNIQUE,
   "folioId" TEXT NOT NULL,
   "total" DECIMAL(12, 2) NOT NULL,
   "issuedById" TEXT,
@@ -152,7 +152,7 @@ CREATE TABLE "Invoice" (
 
 CREATE TABLE "Payment" (
   "id" TEXT NOT NULL PRIMARY KEY,
-  "receiptNumber" INTEGER NOT NULL UNIQUE,
+  "receiptNumber" SERIAL UNIQUE,
   "folioId" TEXT NOT NULL,
   "amount" DECIMAL(12, 2) NOT NULL,
   "method" TEXT NOT NULL,
@@ -160,6 +160,25 @@ CREATE TABLE "Payment" (
   "cashierId" TEXT,
   "receivedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY ("folioId") REFERENCES "GuestFolio"("id")
+);
+
+-- Inventory (created before POS & Kitchen: MenuItemRecipeComponent references InventoryItem)
+CREATE TABLE "Supplier" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "name" TEXT NOT NULL,
+  "phone" TEXT
+);
+
+CREATE TABLE "InventoryItem" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "name" TEXT NOT NULL,
+  "category" TEXT NOT NULL,
+  "unit" TEXT NOT NULL,
+  "quantity" DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  "minStock" DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  "unitCost" DECIMAL(12, 2),
+  "supplierId" TEXT,
+  FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id")
 );
 
 -- POS & Kitchen
@@ -225,7 +244,7 @@ CREATE TABLE "PosOrderItem" (
 
 CREATE TABLE "PosSale" (
   "id" TEXT NOT NULL PRIMARY KEY,
-  "receiptNumber" INTEGER NOT NULL UNIQUE,
+  "receiptNumber" SERIAL UNIQUE,
   "orderId" TEXT NOT NULL UNIQUE,
   "amount" DECIMAL(12, 2) NOT NULL,
   "method" TEXT NOT NULL,
@@ -301,25 +320,7 @@ CREATE TABLE "MaintenanceTicket" (
   FOREIGN KEY ("assignedToId") REFERENCES "User"("id")
 );
 
--- Inventory
-CREATE TABLE "Supplier" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "name" TEXT NOT NULL,
-  "phone" TEXT
-);
-
-CREATE TABLE "InventoryItem" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "name" TEXT NOT NULL,
-  "category" TEXT NOT NULL,
-  "unit" TEXT NOT NULL,
-  "quantity" DECIMAL(12, 2) NOT NULL DEFAULT 0,
-  "minStock" DECIMAL(12, 2) NOT NULL DEFAULT 0,
-  "unitCost" DECIMAL(12, 2),
-  "supplierId" TEXT,
-  FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id")
-);
-
+-- Stock transactions
 CREATE TYPE "StockTxStatus" AS ENUM (
   'POSTED',
   'PENDING',

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, STORE_ROLES } from '@/lib/roles';
+import { useCurrentUser, STORE_ROLES } from '@/lib/roles';
 import { IconCalendar, IconUsers, IconMoney, IconUtensils, IconWrench, IconBox } from './icons';
 import NewReservationModal from './NewReservationModal';
 import NewMaintenanceModal from './NewMaintenanceModal';
@@ -9,7 +9,7 @@ import StockMovementModal from './StockMovementModal';
 
 export default function QuickActions({ onChanged }: { onChanged?: () => void }) {
   const router = useRouter();
-  const role = getCurrentUser()?.role || '';
+  const role = useCurrentUser()?.role || '';
   const [open, setOpen] = useState<'' | 'reservation' | 'maintenance' | 'stock'>('');
 
   const actions = [

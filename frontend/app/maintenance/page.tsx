@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
 import NewMaintenanceModal from '@/components/NewMaintenanceModal';
 import { api } from '@/lib/api';
-import { getCurrentUser, MAINTENANCE_ROLES } from '@/lib/roles';
+import { useCurrentUser, MAINTENANCE_ROLES } from '@/lib/roles';
 import { IconPlus } from '@/components/icons';
 
 const STAGES = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_PART', 'COMPLETED', 'VERIFIED', 'CLOSED'];
@@ -20,7 +20,7 @@ const STATUS_STYLE: Record<string, string> = {
 export default function MaintenancePage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [showNew, setShowNew] = useState(false);
-  const role = getCurrentUser()?.role || '';
+  const role = useCurrentUser()?.role || '';
   const canAdvance = MAINTENANCE_ROLES.includes(role);
 
   const load = () => api('/maintenance/tickets').then(setTickets).catch(() => {});

@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
 import StockMovementModal from '@/components/StockMovementModal';
 import { api } from '@/lib/api';
-import { getCurrentUser, STORE_ROLES } from '@/lib/roles';
+import { useCurrentUser, STORE_ROLES } from '@/lib/roles';
 import { IconPlus } from '@/components/icons';
 
 export default function InventoryPage() {
   const [items, setItems] = useState<any[]>([]);
   const [showMove, setShowMove] = useState(false);
-  const role = getCurrentUser()?.role || '';
+  const role = useCurrentUser()?.role || '';
   const canMove = STORE_ROLES.includes(role);
 
   const load = () => api('/inventory/items').then(setItems).catch(() => {});
