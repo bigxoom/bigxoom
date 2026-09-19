@@ -1,0 +1,492 @@
+// CENTRE PASTORAL NOTRE DAME DE FATIMA — Hospitality ERP
+// Prisma schema — single source of truth for the operational database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// AUTH / RBAC
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  GENERAL_MANAGER
+  RECEPTIONIST
+  CASHIER
+  ACCOUNTANT
+  WAITER
+  BAR_STAFF
+  KITCHEN_STAFF
+  HOUSEKEEPING
+  STOREKEEPER
+  MAINTENANCE
+  SUPERVISOR
+  AUDITOR
+}
+
+model User {
+  id            String   @id @default(uuid())
+  fullName      String
+  username      String   @unique
+  email         String?  @unique
+  phone         String?
+  passwordHash  String
+  role          Role
+  department    String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reservations      Reservation[]      @relation("ReservationCreatedBy")
+  posOrders         PosOrder[]         @relation("PosOrderWaiter")
+  kitchenActions    KitchenTicket[]    @relation("KitchenHandledBy")
+  housekeepingTasks HousekeepingTask[] @relation("HousekeepingAssignedTo")
+  maintenanceTasks  MaintenanceTicket[] @relation("MaintenanceAssignedTo")
+  cashSessions      CashSession[]
+  messagesSent      Message[]          @relation("MessageSender")
+  auditLogs         AuditLog[]
+  expensesApproved  Expense[]          @relation("ExpenseApprover")
+}
+
+// ---------------------------------------------------------------------------
+// ROOMS / PMS
+// ---------------------------------------------------------------------------
+
+enum RoomStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  DIRTY
+  CLEANING
+  READY
+  MAINTENANCE
+  BLOCKED
+}
+
+model RoomType {
+  id          String @id @default(uuid())
+  name        String @unique
+  basePrice   Decimal @db.Decimal(12, 2)
+  capacity    Int
+  description String?
+  rooms       Room[]
+}
+
+model Room {
+  id          String     @id @default(uuid())
+  number      String     @unique
+  floor       String?
+  building    String?
+  roomTypeId  String
+  roomType    RoomType   @relation(fields: [roomTypeId], references: [id])
+  status      RoomStatus @default(AVAILABLE)
+  features    String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  reservations Reservation[]
+  stays        Stay[]
+  housekeeping HousekeepingTask[]
+  maintenance  MaintenanceTicket[]
+  posOrders    PosOrder[]
+}
+
+// ---------------------------------------------------------------------------
+// GUESTS / RESERVATIONS / STAYS
+// ---------------------------------------------------------------------------
+
+model Guest {
+  id             String   @id @default(uuid())
+  fullName       String
+  phone          String?
+  email          String?
+  nationality    String?
+  idNumber       String?
+  organization   String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  reservations Reservation[]
+  stays        Stay[]
+}
+
+enum ReservationStatus {
+  NEW
+  CONFIRMED
+  ARRIVAL
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id              String            @id @default(uuid())
+  guestId         String
+  guest           Guest             @relation(fields: [guestId], references: [id])
+  roomId          String
+  room            Room              @relation(fields: [roomId], references: [id])
+  status          ReservationStatus @default(NEW)
+  arrivalDate     DateTime
+  departureDate   DateTime
+  numGuests       Int               @default(1)
+  specialRequests String?
+  depositAmount   Decimal?          @db.Decimal(12, 2)
+  groupBookingRef String?
+  createdById     String
+  createdBy       User              @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime          @default(now())
+
+  stay Stay?
+}
+
+model Stay {
+  id            String    @id @default(uuid())
+  reservationId String?   @unique
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  guestId       String
+  guest         Guest     @relation(fields: [guestId], references: [id])
+  roomId        String
+  room          Room      @relation(fields: [roomId], references: [id])
+  checkInAt     DateTime  @default(now())
+  checkOutAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  folio GuestFolio?
+}
+
+// ---------------------------------------------------------------------------
+// FOLIO / INVOICING / PAYMENTS
+// ---------------------------------------------------------------------------
+
+model GuestFolio {
+  id        String       @id @default(uuid())
+  stayId    String       @unique
+  stay      Stay         @relation(fields: [stayId], references: [id])
+  status    String       @default("OPEN") // OPEN | CLOSED
+  createdAt DateTime     @default(now())
+
+  items    FolioItem[]
+  invoices Invoice[]
+  payments Payment[]
+}
+
+model FolioItem {
+  id          String     @id @default(uuid())
+  folioId     String
+  folio       GuestFolio @relation(fields: [folioId], references: [id])
+  description String
+  category    String     // ACCOMMODATION | RESTAURANT | BAR | LAUNDRY | OTHER
+  amount      Decimal    @db.Decimal(12, 2)
+  sourceOrderId String?
+  createdAt   DateTime   @default(now())
+}
+
+model Invoice {
+  id         String     @id @default(uuid())
+  number     Int        @unique @default(autoincrement())
+  folioId    String
+  folio      GuestFolio @relation(fields: [folioId], references: [id])
+  total      Decimal    @db.Decimal(12, 2)
+  issuedById String?
+  issuedAt   DateTime   @default(now())
+  pdfPath    String?
+}
+
+model Payment {
+  id            String     @id @default(uuid())
+  receiptNumber Int        @unique @default(autoincrement())
+  folioId       String
+  folio         GuestFolio @relation(fields: [folioId], references: [id])
+  amount        Decimal    @db.Decimal(12, 2)
+  method        String     // CASH | MOBILE_MONEY | CARD | BANK
+  reference     String?
+  cashierId     String?
+  receivedAt    DateTime   @default(now())
+}
+
+// Receipt for a direct (non-folio) POS sale — table/walk-in customer pays on the spot
+model PosSale {
+  id            String   @id @default(uuid())
+  receiptNumber Int      @unique @default(autoincrement())
+  orderId       String   @unique
+  order         PosOrder @relation(fields: [orderId], references: [id])
+  amount        Decimal  @db.Decimal(12, 2)
+  method        String
+  cashierId     String?
+  issuedAt      DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// RESTAURANT / BAR POS + KITCHEN
+// ---------------------------------------------------------------------------
+
+model MenuCategory {
+  id    String     @id @default(uuid())
+  name  String
+  type  String     // RESTAURANT | BAR
+  items MenuItem[]
+}
+
+model MenuItem {
+  id          String       @id @default(uuid())
+  categoryId  String
+  category    MenuCategory @relation(fields: [categoryId], references: [id])
+  name        String
+  price       Decimal      @db.Decimal(12, 2)
+  trackStock  Boolean      @default(false) // if true, selling this item deducts inventory per its recipe
+  active      Boolean      @default(true)
+
+  orderItems PosOrderItem[]
+  recipe      MenuItemRecipeComponent[]
+}
+
+// Recipe / bill-of-materials: how much of each InventoryItem one unit of a MenuItem consumes.
+// A simple drink (e.g. one Primus) is a recipe of one component with quantity 1.
+model MenuItemRecipeComponent {
+  id              String        @id @default(uuid())
+  menuItemId      String
+  menuItem        MenuItem      @relation(fields: [menuItemId], references: [id])
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantityPerUnit Decimal       @db.Decimal(12, 4)
+
+  @@unique([menuItemId, inventoryItemId])
+}
+
+enum PosOrderStatus {
+  OPEN
+  SENT
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+model PosOrder {
+  id          String         @id @default(uuid())
+  type        String         // RESTAURANT | BAR
+  tableNumber String?
+  roomId      String?
+  room        Room?          @relation(fields: [roomId], references: [id])
+  waiterId    String
+  waiter      User           @relation("PosOrderWaiter", fields: [waiterId], references: [id])
+  status      PosOrderStatus @default(OPEN)
+  chargeToRoom Boolean       @default(false)
+  createdAt   DateTime       @default(now())
+
+  items         PosOrderItem[]
+  kitchenTicket KitchenTicket?
+  posSale       PosSale?
+}
+
+model PosOrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      PosOrder @relation(fields: [orderId], references: [id])
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  notes      String?
+  unitPrice  Decimal  @db.Decimal(12, 2)
+}
+
+enum KitchenStatus {
+  NEW
+  ACCEPTED
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+model KitchenTicket {
+  id          String        @id @default(uuid())
+  orderId     String        @unique
+  order       PosOrder      @relation(fields: [orderId], references: [id])
+  status      KitchenStatus @default(NEW)
+  priority    String        @default("NORMAL")
+  handledById String?
+  handledBy   User?         @relation("KitchenHandledBy", fields: [handledById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// HOUSEKEEPING / MAINTENANCE
+// ---------------------------------------------------------------------------
+
+enum HousekeepingStatus {
+  DIRTY
+  ASSIGNED
+  CLEANING
+  INSPECTION
+  READY
+}
+
+model HousekeepingTask {
+  id           String             @id @default(uuid())
+  roomId       String
+  room         Room               @relation(fields: [roomId], references: [id])
+  status       HousekeepingStatus @default(DIRTY)
+  assignedToId String?
+  assignedTo   User?              @relation("HousekeepingAssignedTo", fields: [assignedToId], references: [id])
+  priority     String             @default("NORMAL")
+  notes        String?
+  createdAt    DateTime           @default(now())
+  completedAt  DateTime?
+}
+
+enum MaintenanceStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_PART
+  COMPLETED
+  VERIFIED
+  CLOSED
+}
+
+model MaintenanceTicket {
+  id           String            @id @default(uuid())
+  roomId       String?
+  room         Room?             @relation(fields: [roomId], references: [id])
+  category     String
+  description  String
+  status       MaintenanceStatus @default(OPEN)
+  assignedToId String?
+  assignedTo   User?             @relation("MaintenanceAssignedTo", fields: [assignedToId], references: [id])
+  cost         Decimal?          @db.Decimal(12, 2)
+  createdAt    DateTime          @default(now())
+  resolvedAt   DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// INVENTORY
+// ---------------------------------------------------------------------------
+
+model Supplier {
+  id    String @id @default(uuid())
+  name  String
+  phone String?
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id          String   @id @default(uuid())
+  name        String
+  category    String   // FOOD | DRINKS | CLEANING | GUEST_SUPPLIES | KITCHEN | MAINTENANCE | OFFICE
+  unit        String
+  quantity    Decimal  @default(0) @db.Decimal(12, 2)
+  minStock    Decimal  @default(0) @db.Decimal(12, 2)
+  unitCost    Decimal? @db.Decimal(12, 2)
+  supplierId  String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+
+  transactions StockTransaction[]
+  recipeUses   MenuItemRecipeComponent[]
+}
+
+enum StockTxStatus {
+  POSTED   // applied to quantity immediately (sales deduction, purchase receipt)
+  PENDING  // wastage / manual adjustment awaiting supervisor approval
+  APPROVED
+  REJECTED
+}
+
+model StockTransaction {
+  id             String        @id @default(uuid())
+  itemId         String
+  item           InventoryItem @relation(fields: [itemId], references: [id])
+  type           String        // IN | OUT | ADJUSTMENT | WASTAGE | TRANSFER | SALE_DEDUCTION
+  quantity       Decimal       @db.Decimal(12, 2)
+  reason         String?
+  status         StockTxStatus @default(POSTED)
+  requestedById  String?
+  approvedById   String?
+  sourceOrderId  String?
+  createdAt      DateTime      @default(now())
+  decidedAt      DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// ACCOUNTING
+// ---------------------------------------------------------------------------
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  category    String
+  amount      Decimal  @db.Decimal(12, 2)
+  approvedById String?
+  approvedBy  User?    @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  status      String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt   DateTime @default(now())
+}
+
+model CashSession {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  openingFloat Decimal  @db.Decimal(12, 2)
+  closingTotal Decimal? @db.Decimal(12, 2)
+  notes       String?
+}
+
+// ---------------------------------------------------------------------------
+// COMMUNICATION
+// ---------------------------------------------------------------------------
+
+enum TaskStatus {
+  OPEN
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Message {
+  id          String     @id @default(uuid())
+  senderId    String
+  sender      User       @relation("MessageSender", fields: [senderId], references: [id])
+  toDepartment String?
+  toUserId    String?
+  content     String
+  isOperationalTask Boolean @default(false)
+  status      TaskStatus @default(OPEN)
+  priority    String     @default("NORMAL")
+  readAt      DateTime?
+  createdAt   DateTime   @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// AUDIT / SYSTEM
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}

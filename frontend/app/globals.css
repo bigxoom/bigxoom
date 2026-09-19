@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #FBF6EE;
+  color: #2B2318;
+}
+
+@keyframes fatima-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes fatima-slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.fatima-panel-enter-left {
+  animation: fatima-slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fatima-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fatima-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.fatima-panel-enter {
+  animation: fatima-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fatima-backdrop-enter {
+  animation: fatima-fade-in 180ms ease-out;
+}
+.fatima-live-dot {
+  animation: fatima-pulse-dot 2s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #EFE2CB;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8863B;
+}

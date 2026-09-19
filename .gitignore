@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+backend/dist/
+frontend/.next/
+frontend/out/
+
+# Env files (copy .env.example -> .env locally; never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Backups
+backups/*
+!backups/.gitkeep
+
+# Prisma
+backend/prisma/*.db
