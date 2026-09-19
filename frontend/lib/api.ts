@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api';
+// Relative by default so the same build works from any host that can reach
+// this server (localhost, LAN IP, hostname) — Caddy proxies /api/* on the
+// same origin as the page. NEXT_PUBLIC_API_URL only needs to be set for
+// non-standard setups (e.g. frontend and backend on different hosts/ports).
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export function getToken() {
   if (typeof window === 'undefined') return null;

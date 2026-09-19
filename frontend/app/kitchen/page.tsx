@@ -11,7 +11,10 @@ export default function KitchenPage() {
 
   useEffect(() => {
     api('/kitchen/tickets/active').then(setTickets).catch(() => {});
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost';
+    // Resolve against whatever host the browser is actually using (localhost,
+    // LAN IP, hostname) rather than a build-time value — this must work
+    // identically from every department's device on the LAN.
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
     const socket = io(`${socketUrl}/kitchen`, { transports: ['websocket'] });
     socket.on('ticket:new', () => api('/kitchen/tickets/active').then(setTickets));
     socket.on('ticket:update', () => api('/kitchen/tickets/active').then(setTickets));
