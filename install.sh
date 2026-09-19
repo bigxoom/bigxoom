@@ -30,8 +30,13 @@ echo "Checking for existing services..."
 docker compose down 2>/dev/null || true
 sleep 1
 
-echo "Building containers (this may take a few minutes)..."
-docker compose build --no-cache
+if [ -f images/fatima-erp-images.tar ]; then
+  echo "Prebuilt images found at images/fatima-erp-images.tar — loading instead of building..."
+  docker load -i images/fatima-erp-images.tar
+else
+  echo "Building containers (this may take a few minutes)..."
+  docker compose build --no-cache
+fi
 
 echo "Starting database and cache..."
 docker compose up -d db redis
@@ -91,8 +96,14 @@ echo ""
 echo "⚠️  SECURITY: Change all demo passwords before going live"
 echo ""
 echo "Useful commands:"
+echo "  ./fatima.sh <command>   - Single entry point (start/stop/logs/doctor/...)"
 echo "  ./start.sh              - Start all services"
 echo "  ./stop.sh               - Stop all services"
+echo "  ./restart.sh            - Restart all services"
 echo "  ./health-check.sh       - Check system health"
+echo "  ./doctor.sh             - Diagnose common problems"
+echo "  ./repair.sh             - Attempt to fix common problems"
+echo "  ./logs.sh [service]     - Tail logs"
 echo "  ./backup.sh             - Backup database"
+echo "  ./restore.sh <file>     - Restore a backup"
 echo ""
