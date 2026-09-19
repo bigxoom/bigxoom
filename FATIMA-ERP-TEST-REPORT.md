@@ -161,12 +161,18 @@ console errors.
 - **Prebuilt images are not included.** `images/fatima-erp-images.tar` is
   not part of this package. `install.sh` will build from source, which is
   the documented path in any case.
-- **LAN reachability from a second physical device was not literally
-  tested** (this sandbox has one network namespace). The fix in §2.5 is a
-  well-understood, verifiable-by-inspection correction (confirmed the built
-  JS bundle contains no hardcoded `localhost` string), but a real second
-  device on the LAN opening `http://<server-ip>` after deployment is the
-  final confirmation worth doing once.
+- **LAN reachability from a genuinely separate physical device was not
+  tested** — this sandbox has no bridge to any real network, so that's not
+  possible from here. The closest available proof was run instead: the full
+  stack (Postgres, Redis, backend, frontend, Caddy on :80 — the same
+  topology `docker-compose.yml` describes) was brought up natively and
+  driven through a real browser via `http://192.0.2.2` — the container's own
+  network-facing IP, deliberately not `127.0.0.1`/`localhost` — reproducing
+  exactly the request pattern a second LAN device makes. Login, the 90-room
+  dashboard, and the room drawer all worked with zero failed requests and
+  zero console errors. That confirms the fix at the network-request level,
+  not just by inspecting the bundle; the one thing it can't stand in for is
+  a literal second device on your physical premises.
 - Role-specific dashboards, Finance & Reports, Communication, and Users &
   Settings pages are intentionally not built — the sidebar shows them as
   disabled "Soon" entries rather than dead links. This was a scope decision
@@ -190,7 +196,7 @@ console errors.
 | Frontend | PASS |
 | Full guest journey (reservation→checkout) | PASS (after fixes) |
 | Collected-folder standalone re-test | PASS |
-| LAN URL correctness (build inspection) | PASS (fix verified in bundle; not tested from a second physical device) |
+| LAN URL correctness | PASS — verified live: full stack accessed via the container's network IP (not localhost), zero failed requests; not tested from a genuinely separate physical device (no such device reachable from this sandbox) |
 | Backup/restore mechanism | PASS (pg_dump/restore verified directly, exact row-count match; the `docker compose exec` wrapper itself not exercised — see note above) |
 | Installer (`install.sh`) | Reviewed and updated; not executed end-to-end (same Docker limitation) |
 | Prebuilt image bundle | NOT PRODUCED — Docker Hub unreachable in this sandbox |
