@@ -1,5 +1,3 @@
-version: "3.9"
-
 # CENTRE PASTORAL NOTRE DAME DE FATIMA — Hospitality ERP
 # Offline-first LAN stack. No service here depends on the public internet
 # to run — only the optional "backup-cloud-sync" profile needs it.
